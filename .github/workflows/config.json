@@ -1,0 +1,16 @@
+{
+  "marketplace": "https://www.amazon.in",
+  "brand_name": "YourBrand",
+  "brand_asins": [
+    "B0EXAMPLE01",
+    "B0EXAMPLE02"
+  ],
+  "keywords": [
+    "example keyword one",
+    "example keyword two"
+  ],
+  "max_pages": 3,
+  "headless": false,
+  "min_delay_seconds": 2,
+  "max_delay_seconds": 5
+}
