@@ -1,1 +1,81 @@
+name: Placement Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      keywords:
+        description: "Keywords (comma separated)"
+        required: true
+      brand:
+        description: "Brand name"
+        required: false
+        default: ""
+      asins:
+        description: "Your ASINs (comma separated, optional)"
+        required: false
+        default: ""
+      marketplace:
+        description: "Marketplace"
+        required: true
+        default: "https://www.amazon.in"
+        type: choice
+        options:
+          - "https://www.amazon.in"
+          - "https://www.amazon.com"
+          - "https://www.amazon.ae"
+          - "https://www.amazon.co.uk"
+          - "https://www.amazon.de"
+      pages:
+        description: "Pages to scan per keyword"
+        required: true
+        default: "3"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Build config from inputs
+        env:
+          IN_KEYWORDS: ${{ inputs.keywords }}
+          IN_BRAND: ${{ inputs.brand }}
+          IN_ASINS: ${{ inputs.asins }}
+          IN_MARKETPLACE: ${{ inputs.marketplace }}
+          IN_PAGES: ${{ inputs.pages }}
+        run: |
+          python - << 'EOF'
+          import json, os
+          cfg = {
+              "marketplace": os.environ["IN_MARKETPLACE"],
+              "brand_name": os.environ["IN_BRAND"].strip(),
+              "brand_asins": [a.strip() for a in os.environ["IN_ASINS"].split(",") if a.strip()],
+              "keywords": [k.strip() for k in os.environ["IN_KEYWORDS"].split(",") if k.strip()],
+              "max_pages": max(1, min(int(os.environ["IN_PAGES"] or 3), 10)),
+              "headless": True,
+          }
+          json.dump(cfg, open("ci_config.json", "w"), indent=2)
+          print(json.dumps(cfg, indent=2))
+          EOF
+
+      - name: Run placement check
+        run: python placement_checker.py ci_config.json
+
+      - name: Upload Excel report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: placement-report
+          path: reports/
+          if-no-files-found: warn
 
